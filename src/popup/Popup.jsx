@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import './popup.css'; 
 import hatIcon from '../assets/graduation-hat.svg';
-import { List, ListItem, ListItemButton, ListItemText, Typography, IconButton } from '@mui/material';
+import { List, ListItem, ListItemButton, ListItemText, Typography, IconButton, Box } from '@mui/material';
+import { Link } from 'react-router-dom';
 import CloseIcon from '@mui/icons-material/Close';
 
 function Popup() {
@@ -10,7 +11,7 @@ function Popup() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowAnimation(false);
-    }, 3000); // Adjust time as needed for animation
+    }, 3000); 
 
     return () => clearTimeout(timer);
   }, []);
@@ -23,50 +24,48 @@ function Popup() {
   };
 
   return (
-    <div id="root" className="w-full h-full flex flex-col justify-center items-center bg-white p-4 rounded-lg relative">
+    <div className="w-full h-full bg-white p-1.5 rounded-lg relative box-border">
       <IconButton
         onClick={handleClose}
-        className="absolute top-2 right-2"
+        className="absolute"
         aria-label="close"
-        sx={{ backgroundColor: '#f0f0f0', color: '#333', '&:hover': { backgroundColor: '#e0e0e0' } }}
+        sx={{ backgroundColor: '#FFFFFFFF', color: '#333', '&:hover': { backgroundColor: '#e0e0e0' } }}
       >
         <CloseIcon />
       </IconButton>
       {showAnimation ? (
-        <div className="animation-container flex flex-col justify-center items-center">
-          <img
-            src={hatIcon}
-            alt="Graduation Hat"
-            className="animate-throw-hat w-24 mb-3"
-          />
+        <div className="animation-container box-border max-w-md">
+          <img src={hatIcon} alt="Graduation Hat" className="animate-throw-hat w-24 mb-3" />
           <Typography variant="h6" className="animate-fade-out-text text-gray-700">
             Welcome to EduCompanion
           </Typography>
         </div>
       ) : (
-        <div className="options-container w-full mt-6 flex flex-col items-center max-w-xs">
+        <Box className="w-full max-w-md flex flex-col items-center justify-center box-border">
           <Typography variant="h6" className="mb-4 text-gray-800 text-center">
-            Choose an Option:
+            How may I help?
           </Typography>
           <List className="w-full">
             {[
-              { text: 'Transcribe Video', emoji: '📝' },
-              { text: 'Generate Summary', emoji: '🔍' },
-              { text: 'Create Flashcards', emoji: '📚' },
-              { text: 'Ask a Question', emoji: '❓' },
+              { text: 'Transcribe Video', emoji: '📝', path: '/TranscriptDisplay' },
+              { text: 'Generate Summary', emoji: '🔍', path: '/Summary' },
+              { text: 'Create Flashcards', emoji: '📚', path: '/FlashcardGenerator' },
+              { text: 'Ask a Question', emoji: '❓', path: '/QABot' },
             ].map((option, index) => (
               <ListItem key={index} disablePadding>
-                <ListItemButton
-                  className="rounded-lg shadow-md hover:bg-blue-50 transition-all"
-                  sx={{ display: 'flex', alignItems: 'center', padding: '12px', animation: 'fadeIn 0.5s ease-out' }}
-                >
-                  <span className="mr-2">{option.emoji}</span>
-                  <ListItemText primary={option.text} className="text-center" />
-                </ListItemButton>
+                <Link to={option.path} className="w-full">
+                  <ListItemButton
+                    className="rounded-lg shadow-md hover:bg-blue-50 transition-all"
+                    sx={{ display: 'flex', alignItems: 'center', padding: '12px', animation: 'fadeIn 0.5s ease-out' }}
+                  >
+                    <span className="mr-2">{option.emoji}</span>
+                    <ListItemText primary={option.text} className="text-center" />
+                  </ListItemButton>
+                </Link>
               </ListItem>
             ))}
           </List>
-        </div>
+        </Box>
       )}
     </div>
   );

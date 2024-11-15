@@ -1,25 +1,43 @@
-// This script runs in the context of the web page
-console.log('EduCompanion content script loaded');
+let recognition;
 
-// Example: Extracting the page title and logging it
-const pageTitle = document.title;
-console.log('Page Title:', pageTitle);
-
-// Example: Highlight all <p> tags on the page
-const paragraphs = document.querySelectorAll('p');
-paragraphs.forEach(p => {
-  p.style.backgroundColor = 'yellow';
-});
-
-// Communicate with the background script or popup
-chrome.runtime.sendMessage({ action: 'pageTitle', data: pageTitle }, (response) => {
-  console.log('Response from background:', response);
-});
-
-// Listen for messages from the extension
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'highlightText') {
-    document.body.style.backgroundColor = message.color || 'lightblue';
-    sendResponse({ status: 'Text highlighted' });
+  if (message.type === 'CAPTURE_AUDIO') {
+    console.log('Starting transcription process...');
+    startTranscription();
+    sendResponse({ started: true });
+    return true;
+  } else if (message.type === 'STOP_TRANSCRIPTION') {
+    console.log('Stopping transcription process...');
+    if (recognition) {
+      recognition.stop();
+      sendResponse({ stopped: true });
+    } else {
+      sendResponse({ error: 'No transcription in progress.' });
+    }
+    return true;
   }
 });
+
+function startTranscription() {
+  recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = 'en-US';
+  recognition.continuous = true; // Enable continuous transcription
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onresult = (event) => {
+    const transcript = Array.from(event.results)
+      .map(result => result[0].transcript)
+      .join('\n');
+    console.log('Transcription completed:', transcript);
+
+    chrome.runtime.sendMessage({ type: 'TRANSCRIPTION_RESULT', transcript });
+  };
+
+  recognition.onerror = (event) => {
+    console.error('Error during transcription:', event.error);
+    chrome.runtime.sendMessage({ type: 'TRANSCRIPTION_ERROR', error: event.error });
+  };
+
+  recognition.start();
+}
