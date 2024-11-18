@@ -1,20 +1,41 @@
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'CAPTURE_AUDIO' || message.type === 'STOP_TRANSCRIPTION') {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs.length > 0) {
-        // Inject the content script if it is not already present
+  if (message.type === 'CAPTURE_AUDIO') {
+    chrome.storage.local.set({ isTranscribing: true });
+    startTranscriptionOnTab(sendResponse);
+    return true; // Keep the channel open for async response
+  } else if (message.type === 'STOP_TRANSCRIPTION') {
+    chrome.storage.local.set({ isTranscribing: false });
+    chrome.tabs.query({}, (tabs) => {
+      tabs.forEach((tab) => {
+        if (isValidURL(tab.url)) {
+          chrome.tabs.sendMessage(tab.id, { type: 'STOP_TRANSCRIPTION' }, (response) => {
+            if (chrome.runtime.lastError) {
+              console.error('Error stopping transcription:', chrome.runtime.lastError);
+            }
+          });
+        }
+      });
+    });
+    sendResponse({ stopped: true });
+    return true; // Keep the channel open for async response
+  }
+});
+
+function startTranscriptionOnTab(sendResponse) {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    tabs.forEach((tab) => {
+      if (isValidURL(tab.url)) {
         chrome.scripting.executeScript({
-          target: { tabId: tabs[0].id },
+          target: { tabId: tab.id },
           files: ['contentScript.js']
         }, () => {
           if (chrome.runtime.lastError) {
             console.error('Error injecting content script:', chrome.runtime.lastError);
             sendResponse({ error: chrome.runtime.lastError.message });
           } else {
-            // Send the message to the content script to start transcription
-            chrome.tabs.sendMessage(tabs[0].id, message, (response) => {
+            chrome.tabs.sendMessage(tab.id, { type: 'CAPTURE_AUDIO' }, (response) => {
               if (chrome.runtime.lastError) {
-                console.error('Error in response from content script:', chrome.runtime.lastError);
+                console.error('Error sending message:', chrome.runtime.lastError);
                 sendResponse({ error: chrome.runtime.lastError.message });
               } else {
                 sendResponse(response);
@@ -23,10 +44,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           }
         });
       } else {
-        sendResponse({ error: 'No active tab found.' });
+        console.log(`Skipped injection on non-valid URL: ${tab.url}`);
       }
     });
+  });
+}
 
-    return true; // Keeps the channel open for async response
-  }
-});
+function isValidURL(url) {
+  return url && url.startsWith('http') && !url.startsWith('chrome://');
+}
